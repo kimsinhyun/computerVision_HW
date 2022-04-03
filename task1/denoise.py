@@ -16,11 +16,9 @@ def task1_2(src_path, clean_path, dst_path):
     # noisy_img = cv2.imread(src_path, cv2.IMREAD_GRAYSCALE)
     noisy_img = cv2.imread(src_path)
     clean_img = cv2.imread(clean_path)
-    print(noisy_img)
-    print(noisy_img.shape)
-    print(type(noisy_img.shape))
     # result_img = None
-    result_img = apply_median_filter(noisy_img,3)
+    # result_img = apply_median_filter(noisy_img,3)
+    result_img = apply_bilateral_filter(noisy_img,3, 1000,1000)
 
     # do noise removal
 
@@ -37,14 +35,14 @@ def apply_median_filter(img, kernel_size):
 
     You should return result image.
     """
+    #mean is best padding solution = 7.88
+    img = np.lib.pad(img, [(int(kernel_size/2),int(kernel_size/2)),(int(kernel_size/2),int(kernel_size/2)),(0,0)],"mean")
     kernel_size = (kernel_size,kernel_size,0)
-    img_shape = np.shape(img)
+    img_shape = img.shape
     return_shape = tuple( np.int64(
         (np.array(img_shape) - np.array(kernel_size)) + 1
     ))
-    print("return_shape", (np.array(img_shape)))
-    print("return_shape", np.array(kernel_size))
-    print("return_shape", (np.array(img_shape) - np.array(kernel_size)))
+    print("return_shape: ", return_shape)
     return_img = np.zeros(return_shape)
     for z in range(3):
         for x in range(0, return_shape[0]):
@@ -56,11 +54,6 @@ def apply_median_filter(img, kernel_size):
 
 
 def apply_bilateral_filter(img, kernel_size, sigma_s, sigma_r):
-    # gaussiam_temp_kernel_max_num = (kernel_size - 1)/2
-    # gaussiam_temp_kernel_range = np.linspace(-gaussiam_temp_kernel_max_num, gaussiam_temp_kernel_max_num, kernel_size)
-    # gaussiam_kernel_x, gaussiam_kernel_y = np.meshgrid(gaussiam_temp_kernel_range)
-    # gaussiam_kernel = np.exp(-0.5 * (np.square(gaussiam_kernel_x) + np.square(gaussiam_kernel_y)) / np.square(sigma_s))
-    # gaussiam_kernel
     """
     You should implement bilateral filter using convolution in this function.
     It takes at least 4 arguments,
@@ -71,9 +64,33 @@ def apply_bilateral_filter(img, kernel_size, sigma_s, sigma_r):
 
     You should return result image.
     """
-    return img
-
-
+    print("raw img_shape:", img.shape)
+    img = np.lib.pad(img, [(int(kernel_size/2),int(kernel_size/2)),(int(kernel_size/2),int(kernel_size/2)),(0,0)],"mean")
+    kernel_size = (kernel_size,kernel_size,0)
+    img_shape = img.shape
+    print("img_shape:", img_shape)
+    return_shape = tuple( np.int64(
+        (np.array(img_shape) - np.array(kernel_size)) + 1
+    ))
+    return_img = np.zeros(return_shape)
+    print("return_shape:", return_shape)
+    # return_img = img.copy()
+    print("return_img.shape:", return_img.shape)
+    for i in range(kernel_size[0], img.shape[0] - kernel_size[0]):
+        for j in range(kernel_size[0], img.shape[1] - kernel_size[0]):
+            for k in range(img.shape[2]):
+                weight_sum = 0.0
+                pixel_sum = 0.0
+                for x in range(-kernel_size[0], kernel_size[0]+1):
+                    for y in range(-kernel_size[0], kernel_size[0]+1):
+                        spatial_weight = -(x ** 2 + y ** 2) / (2 * (sigma_s ** 2))
+                        color_weight = -(int(img[i][j][k]) - int(img[i + x][j + y][k])) ** 2 / (2 * (sigma_r ** 2))
+                        weight = np.exp(spatial_weight + color_weight)
+                        weight_sum += weight
+                        pixel_sum += (weight * img[i + x][j + y][k])
+                value = pixel_sum / weight_sum
+                return_img[i][j][k] = value
+    return return_img.astype(np.uint8)
 def apply_my_filter(img):
     """
     You should implement additional filter using convolution.
@@ -100,4 +117,15 @@ def calculate_rms(img1, img2):
 
 
 if __name__ == "__main__":
-    task1_2("./test_images/cat_noisy.jpg", "./test_images/cat_clean.jpg","./test.jpg")
+    # task1_2("./test_images/cat_noisy.jpg", "./test_images/cat_clean.jpg","./test.jpg")
+    task1_2("./test_images/fox_noisy.jpg", "./test_images/fox_clean.jpg","./test.jpg")
+    # img1 = cv2.imread('./test_images/fox_clean.jpg')
+    # img2 = cv2.imread('./test_images/fox_noisy.jpg')
+    # img3 = cv2.imread('./snowman_bilateral_filter.jpg')
+    img1 = cv2.imread('./test_images/fox_clean.jpg')
+    img2 = cv2.imread('./test_images/fox_noisy.jpg')
+    img3 = cv2.imread('./test.jpg')
+    print(img1.shape)
+    print(img2.shape)
+    print(img3.shape)
+    print(calculate_rms(img1,img3))
