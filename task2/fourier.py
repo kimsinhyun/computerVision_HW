@@ -9,14 +9,32 @@ def fftshift(img):
     This function should shift the spectrum image to the center.
     You should not use any kind of built in shift function. Please implement your own.
     '''
-    return img
+    
+    freq_1_1 = img[:img.shape[0]//2, :img.shape[0]//2]
+    freq_1_2 = img[img.shape[0]//2:, :img.shape[0]//2]
+    freq_2_1 = img[:img.shape[0]//2, img.shape[1]//2:]
+    freq_2_2 = img[img.shape[0]//2:, img.shape[1]//2:]
+    freq_2 = np.concatenate((freq_2_2, freq_2_1))
+    freq_1 = np.concatenate((freq_1_2, freq_1_1))
+    freq = np.concatenate((freq_2, freq_1),axis=1)
+
+    # m_spectrum = 20*np.log(np.abs(freq))
+    return freq
+
 
 def ifftshift(img):
     '''
     This function should do the reverse of what fftshift function does.
     You should not use any kind of built in shift function. Please implement your own.
     '''
-    return img
+    freq_1_1 = img[:img.shape[0]//2, :img.shape[0]//2]
+    freq_1_2 = img[img.shape[0]//2:, :img.shape[0]//2]
+    freq_2_1 = img[:img.shape[0]//2, img.shape[1]//2:]
+    freq_2_2 = img[img.shape[0]//2:, img.shape[1]//2:]
+    freq_2 = np.concatenate((freq_2_2, freq_2_1))
+    freq_1 = np.concatenate((freq_1_2, freq_1_1))
+    freq = np.concatenate((freq_2, freq_1),axis=1)
+    return freq
 
 def fm_spectrum(img):
     '''
@@ -24,19 +42,70 @@ def fm_spectrum(img):
     Make sure that the spectrum image is shifted to the center using the implemented fftshift function.
     You may have to multiply the resultant spectrum by a certain magnitude in order to display it correctly.
     '''
-    return img
+    img = np.fft.fft2(img)
+    img = fftshift(img)
+    m_spectrum = 20*np.log(np.abs(img))
+    return m_spectrum
 
 def low_pass_filter(img, r=30):
     '''
     This function should return an image that goes through low-pass filter.
     '''
-    return img
+    height, width = img.shape
+    fft = np.fft.fft2(img)
+    fftshifted = fftshift(fft)
+    #중앙에 검은색 동그라미
+    for i in range(height):
+        for j in range(width):
+            if (i - (height)/2)**2 + (j - (width)/2)**2 >= r**2:
+                fftshifted[i, j] = 0
+    
+    fftshifted = np.fft.ifftshift(fftshifted)
+    ifft = np.fft.ifft2(fftshifted)
+    
+    temp = np.zeros((height, width))
+    for i in range(height):
+        for j in range(width):
+            temp[i, j] = ifft[i, j].real
+    
+    max, min = np.max(temp) , np.min(temp)
+    return_img = np.zeros((height, width), dtype = "uint8")
+    
+    for i in range(height):
+        for j in range(width):
+            return_img[i, j] = 255*(temp[i, j] - min)/(max - min)
+    return return_img
 
 def high_pass_filter(img, r=20):
     '''
     This function should return an image that goes through high-pass filter.
     '''
-    return img
+    height, width = img.shape
+    fft = np.fft.fft2(img)
+    fftshifted = fftshift(fft)
+    #중앙에 검은색 동그라미
+    for i in range(height):
+        for j in range(width):
+            if (i - (height)/2)**2 + (j - (width)/2)**2 <= r**2:
+                fftshifted[i, j] = 1
+            
+    fftshifted = np.fft.ifftshift(fftshifted)
+    ifft = np.fft.ifft2(fftshifted)
+    
+    temp = np.zeros((height, width))
+    for i in range(height):
+        for j in range(width):
+            temp[i, j] = ifft[i, j].real
+    
+    # max, min = np.max(temp) , np.min(temp)
+    # # return_img = np.zeros((height, width), dtype = "uint8")
+    # return_img = np.zeros((height, width))
+    
+    # for i in range(height):
+    #     for j in range(width):
+    #         return_img[i, j] = 255*(temp[i, j].real - min)/(max - min)
+
+    return temp
 
 def denoise1(img):
     '''
