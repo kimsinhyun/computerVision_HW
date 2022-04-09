@@ -112,14 +112,77 @@ def denoise1(img):
     Use adequate technique(s) to denoise the image.
     Hint: Use fourier transform
     '''
-    return img
+
+    height, width = img.shape
+    fft = np.fft.fft2(img)
+    fftshifted = fftshift(fft)
+    r1 = 20
+    #중앙에 검은색 동그라미
+    #특정 구역을 1 시그마 값으로 outlier를 찾고 옆에 값으로 치환
+    test_2 = [fftshifted.mean() - 1 * fftshifted.std(), fftshifted.mean() + 1 * fftshifted.std()]
+    for i in range(height):
+        for j in range(width):
+            # if ((i - (height)/2)**2 + (j - (width)/2)**2 >= r1**2 and (i - (height)/2)**2 + (j - (width)/2)**2 <= r2**2):
+            if (i - (height)/2)**2 + (j - (width)/2)**2 >= r1**2:
+                if(np.abs(i - (height//2)) >= 5):
+                    if(np.abs(j - (width//2)) >= 5):
+                        if(fftshifted[i, j] <= test_2[0]):
+                            fftshifted[i, j] = fftshifted[i+10, j+10]
+                        elif(fftshifted[i, j]  >= test_2[1]):
+                            fftshifted[i, j] = fftshifted[i+10, j+10]
+    
+    fftshifted = np.fft.ifftshift(fftshifted)
+    ifft = np.fft.ifft2(fftshifted)
+    
+    temp = np.zeros((height, width))
+    for i in range(height):
+        for j in range(width):
+            temp[i, j] = ifft[i, j].real
+    
+    max, min = np.max(temp) , np.min(temp)
+    return_img = np.zeros((height, width), dtype = "uint8")
+    
+    for i in range(height):
+        for j in range(width):
+            return_img[i, j] = 255*(temp[i, j] - min)/(max - min)
+    return return_img
 
 def denoise2(img):
     '''
     Use adequate technique(s) to denoise the image.
     Hint: Use fourier transform
     '''
-    return img
+    height, width = img.shape
+    fft = np.fft.fft2(img)
+    fftshifted = fftshift(fft)
+    r1 = 27
+    r2 = 28
+    test = np.mean(fftshifted[height//2-14:height//2+14,width//2-14:width//2+14])
+    print(height//2-1)
+    #중앙에 검은색 동그라미
+    for i in range(height):
+        for j in range(width):
+            if ((i - (height)/2)**2 + (j - (width)/2)**2 >= r1**2 and (i - (height)/2)**2 + (j - (width)/2)**2 <= r2**2):
+                if(i<=height//2-2 or i>=height//2+2):
+                    if(j<=height//2-1 or j>=height//2+2):
+                        fftshifted[i, j] = test
+    
+    fftshifted = np.fft.ifftshift(fftshifted)
+    ifft = np.fft.ifft2(fftshifted)
+    
+    temp = np.zeros((height, width))
+    for i in range(height):
+        for j in range(width):
+            temp[i, j] = ifft[i, j].real
+    
+    max, min = np.max(temp) , np.min(temp)
+    return_img = np.zeros((height, width), dtype = "uint8")
+    
+    for i in range(height):
+        for j in range(width):
+            return_img[i, j] = 255*(temp[i, j] - min)/(max - min)
+    return return_img
+
 
 #################
 
