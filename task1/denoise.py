@@ -18,8 +18,8 @@ def task1_2(src_path, clean_path, dst_path):
     kernel_size, sigma_s, sigma_r = 7,0.89,700
     print("kernel_size, sigma_s, sigma_r: ", kernel_size, sigma_s, sigma_r)
     # result_img = apply_median_filter(noisy_img, 3)
-    result_img = apply_bilateral_filter(noisy_img, kernel_size, sigma_s, sigma_r)
-    # result_img = apply_my_filter(noisy_img, 3, 1.3)
+    # result_img = apply_bilateral_filter(noisy_img, kernel_size, sigma_s, sigma_r)
+    result_img = apply_my_filter(noisy_img, 3, 1.3)
     
     # do noise removal
     print("result_img shape: ", result_img.shape)
@@ -31,8 +31,7 @@ def task1_2(src_path, clean_path, dst_path):
     pass
 
 
-def apply_median_filter(img, kernel_size):
-    """
+"""
     You should implement median filter using convolution in this function.
     It takes 2 arguments,
     'img' is source image, and you should perform convolution with median filter.
@@ -40,6 +39,8 @@ def apply_median_filter(img, kernel_size):
 
     You should return result image.
     """
+def apply_median_filter(img, kernel_size):
+    
     img = np.lib.pad(img, [(int(kernel_size/2),int(kernel_size/2)),(int(kernel_size/2),int(kernel_size/2)),(0,0)],"mean")
     img_shape = img.shape
     return_shape = tuple( np.int64(
@@ -56,9 +57,7 @@ def apply_median_filter(img, kernel_size):
     return_img = np.clip(return_img, 0, 255).astype(np.uint8)
     return return_img
 
-
-def apply_bilateral_filter(img, kernel_size, sigma_s, sigma_r):
-    """
+"""
     You should implement bilateral filter using convolution in this function.
     It takes at least 4 arguments,
     'img' is source image, and you should perform convolution with median filter.
@@ -68,6 +67,7 @@ def apply_bilateral_filter(img, kernel_size, sigma_s, sigma_r):
 
     You should return result image.
     """
+def apply_bilateral_filter(img, kernel_size, sigma_s, sigma_r):
     height, width, _ = img.shape
     img_filterd = np.zeros([height, width, 3])
     kernel_center = kernel_size//2
@@ -93,38 +93,34 @@ def apply_bilateral_filter(img, kernel_size, sigma_s, sigma_r):
     img_filterd = np.clip(img_filterd, 0, 255).astype(np.uint8)
     return np.asarray(img_filterd)
 
-
-def apply_my_filter(img, kernel_size, sigma):
-    """
+"""
     You should implement additional filter using convolution.
     You can use any filters for this function, except median, bilateral filter.
     You can add more arguments for this function if you need.
 
     You should return result image.
     """
+def apply_my_filter(img, kernel_size, sigma):
+    
     #gaussian filter
     height, width, _ = img.shape
-
-    pad = kernel_size // 2
-    out = np.zeros((height + pad * 2, width + pad * 2, 3))
-    out[pad: pad + height, pad: pad + width] = img.copy().astype(np.float)
-
-    K = np.zeros((kernel_size, kernel_size))
-    for x in range(-pad, -pad + kernel_size):
-        for y in range(-pad, -pad + kernel_size):
-            K[y + pad, x + pad] = np.exp( -(x ** 2 + y ** 2) / (2 * (sigma ** 2)))
-    K /= (2 * np.pi * sigma * sigma)
-    K /= K.sum()
-    tmp = out.copy()
-
-    #filtering
-    for y in range(height):
-        for x in range(width):
-            for z in range(3):
-                out[pad + y, pad + x, z] = np.sum(K * tmp[y: y + kernel_size, x: x + kernel_size, z])
-    out = np.clip(out, 0, 255)
-    out = out[pad: pad + height, pad: pad + width].astype(np.uint8)
-    return out
+    img_filterd = np.zeros([height, width, 3])
+    kernel_center = kernel_size//2
+    spatial_filter = np.zeros((kernel_size, kernel_size))
+    for i in range(kernel_size):
+        for j in range(kernel_size):
+            spatial_filter[i][j] = np.exp(-((i-kernel_center)*(i-kernel_center)+(j-kernel_center)*(j-kernel_center))/(2*sigma*sigma))
+    spatial_filter /= (2 * np.pi * sigma * sigma)
+    spatial_filter /= spatial_filter.sum()
+    for i in range(height):
+        for j in range(width):
+            for x in range(kernel_size):
+                for y in range(kernel_size):
+                    for rgb in range(3):
+                        if i-kernel_center+x >= 0 and i-kernel_center+x < height and j-kernel_center+y >= 0 and j-kernel_center+y < width:
+                            img_filterd[i][j][rgb] = img_filterd[i][j][rgb] + img[i-kernel_center+x][j-kernel_center+y][rgb]*spatial_filter[x][y]
+    img_filterd = np.clip(img_filterd, 0, 255).astype(np.uint8)
+    return np.asarray(img_filterd)
 
 
 def calculate_rms(img1, img2):
