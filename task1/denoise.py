@@ -1,4 +1,3 @@
-from itertools import chain
 import cv2
 import numpy as np
 
@@ -18,8 +17,8 @@ def task1_2(src_path, clean_path, dst_path):
     kernel_size, sigma_s, sigma_r = 7,0.89,700
     print("kernel_size, sigma_s, sigma_r: ", kernel_size, sigma_s, sigma_r)
     # result_img = apply_median_filter(noisy_img, 3)
-    # result_img = apply_bilateral_filter(noisy_img, kernel_size, sigma_s, sigma_r)
-    result_img = apply_my_filter(noisy_img, 3, 1.3)
+    result_img = apply_bilateral_filter(noisy_img, kernel_size, sigma_s, sigma_r)
+    # result_img = apply_my_filter(noisy_img, 3, 1.3)
     
     # do noise removal
     print("result_img shape: ", result_img.shape)
@@ -133,18 +132,16 @@ def calculate_rms(img1, img2):
         raise Exception("img1 and img2 should have same sizes.")
 
     diff = np.abs(img1 - img2)
-    diff = np.abs(img1.astype(dtype=np.int64) - img2.astype(dtype=np.int64))
+    diff = np.abs(img1.astype(dtype=np.int) - img2.astype(dtype=np.int))
     return np.sqrt(np.mean(diff ** 2))
 
 if __name__ == "__main__":
     # task1_2("./test_images/fox_noisy.jpg", "./test_images/fox_clean.jpg","./task1_2_result/fox_bilater.jpg")
-    # task1_2("./test_images/snowman_noisy.jpg", "./test_images/snowman_clean.jpg","./task1_2_result/snowman_bilater.jpg")
-    task1_2("./test_images/snowman_noisy.jpg", "./test_images/snowman_clean.jpg","./task1_2_result/snowman_my.jpg")
+    task1_2("./test_images/snowman_noisy.jpg", "./test_images/snowman_clean.jpg","./task1_2_result/snowman_bilater.jpg")
+    # task1_2("./test_images/snowman_noisy.jpg", "./test_images/snowman_clean.jpg","./task1_2_result/snowman_my.jpg")
     # img1 = cv2.imread('./test_images/fox_clean.jpg')
     # img2 = cv2.imread('./test_images/fox_noisy.jpg')
-    # img3 = cv2.imread('./temp_bia.jpg')
     # img3 = cv2.imread('./task1_2_result/fox_bilater.jpg')
-    # img3 = cv2.imread('./csdn_3.jpg')
 
     # print(img1.shape)
     # print(img2.shape)
