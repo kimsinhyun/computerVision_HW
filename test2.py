@@ -4,7 +4,7 @@ import cv2
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-
+from sklearn.metrics import mean_squared_error
 #이미지 출력 함수
 def show_img(title,img):
     plt.figure(figsize= (12, 12))
@@ -21,22 +21,10 @@ def createDir(dir):
         print ('Error: Creating directory. ' +  dir)
 
 def save_img(student_id, image_path,img):
-    # img_file_name = image_path.split("/")[2]
-    # file_name = "./" + student_id + "/" + img_file_name
-    # fout = open(file_name, 'wb')
-    # pmg_header = "P5" +  "\n" + str(img.shape[0]) + " " + str(img.shape[1]) + "\n" + str(255) + "\n"
-    # pgm_header_byte = bytearray(pmg_header, 'utf-8')
-    # fout.write(pgm_header_byte)
-    # img = np.reshape(img,(img.shape[0],img.shape[1],1))
-
-    # for i in range(img.shape[1]):
-    #     bnd = list(img[i,:])
-    #     fout.write(bytearray(bnd)) # for 8-bit data only
-    # fout.close()
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-# Write to disk
-    cv2.imwrite("frame%d.pgm" % str(1), gray)
+    img_file_name = image_path.split("/")[2]
+    file_path = "./" + student_id + "/" + img_file_name
+    # cv2.imwrite(file_path,img)
+    cv2.imwrite(file_path,img)
 
 #min max scaler
 def min_max_scaler(img):
@@ -46,19 +34,22 @@ def min_max_scaler(img):
     return img
 
 #정보 출력 함수
-def print_info(image_path, rate, K, origin_image, u_shape, s_shape, vT_shape, zip_rate):
+def print_info(image_path, rate, K, raw_img, u_shape, s_shape, vT_shape, zip_rate):
     print("원본 이미지:\t\t", image_path)
     print("보존률:\t\t", rate)
     print("사용된 dimension:\t\t", K)
-    print("원본 이미지 크기：\t\t", origin_image.shape)
+    print("원본 이미지 크기：\t\t", raw_img.shape)
     print("차원축소 후 각 matrix 크기:\t\t3 x ({} + {} + {})". format(u_shape, s_shape, vT_shape))
     print("압축율：\t\t", zip_rate)
 
-def zip_image_by_svd(student_id, image_path, origin_image, rate = 0.8):
-    result = np.zeros(origin_image.shape)
+def compute_MSE(raw_img, result):
+    return np.mean(np.square(raw_img - result))
+
+def svd_pca(student_id, image_path, raw_img, rate = 0.8):
+    result = np.zeros(raw_img.shape)
     u_shape, s_shape, vT_shape  = 0 , 0 , 0
     #각 체널마다 svd 특이값 추출, sigma 안에 원본 데이터의 얼만큼의 표현율을 담는지가 들어있음
-    U, sigma, V = np.linalg.svd(origin_image[:, :])
+    U, sigma, V = np.linalg.svd(raw_img[:, :])
     K, temp = 0, 0
     # 보존률을 만족하기 위해 필요한 singular value 수 (K)
     while (temp / np.sum(sigma)) < rate:
@@ -75,26 +66,29 @@ def zip_image_by_svd(student_id, image_path, origin_image, rate = 0.8):
     result = min_max_scaler(result)
     #결과를 0~255의 int 배열로 저장 (이미지이기 때문에)
     result  = np.round(result * 255).astype('int')
+    #compute MAE
+    print(compute_MSE(raw_img, result))
     # 결과 저장
-    cv2.imwrite("result.png",result)
     save_img(student_id,image_path,result)
     # 압축률 계산
-    zip_rate =(origin_image.size -3 * (u_shape[0] * u_shape[1] + s_shape[0] * s_shape[1] + vT_shape[0] * vT_shape[1])) / (origin_image.size)
+    zip_rate =(raw_img.size -3 * (u_shape[0] * u_shape[1] + s_shape[0] * s_shape[1] + vT_shape[0] * vT_shape[1])) / (raw_img.size)
     #정보 표시
-    # print_info(image_path, rate, K, origin_image, u_shape, s_shape, vT_shape, zip_rate)
-    
+    # print_info(image_path, rate, K, raw_img, u_shape, s_shape, vT_shape, zip_rate)
+    return K
 
 def main(student_id, image_path, rate):
     #read image
-    origin_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    
+    raw_img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     #use numpy svd to reduce dimension 
-    zip_image_by_svd(student_id, image_path, origin_image, rate)
-    
+    return svd_pca(student_id, image_path, raw_img, rate)
 #main func
 if __name__ == "__main__":
     student_id = "2016147588"
     createDir(student_id)
     rate=float(sys.argv[1])
-    image_path = './faces_training/face01.pgm'
-    main(student_id, image_path, rate)
+    img_list = os.listdir("faces_training") # dir is your directory path
+    K_list = []
+    for img_name in img_list:
+        temp_K = main(student_id, f"./faces_training/{img_name}", rate)
+        K_list.append(temp_K)
+    print(K_list)
