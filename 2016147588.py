@@ -10,11 +10,11 @@ def atoi(text):
 
 def natural_keys(text):
     return [ atoi(c) for c in re.split(r'(\d+)', text) ]
-def show_img(title,img):
-    plt.figure(figsize= (12, 12))
-    plt.title(title)
-    plt.imshow(img)
-    plt.show()
+
+def show_img(temp):
+    cv2.imshow('image', temp)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 #directory 생성
 def createDir(dir):
@@ -36,21 +36,13 @@ def min_max_scaler(img):
     img[:, :] = (img[:, :] - temp_min) / (temp_max - temp_min)  
     return img
 
-#정보 출력 함수
-def print_info(image_path, rate, K, raw_img, u_shape, s_shape, vT_shape):
-    print("원본 이미지:\t\t\t", image_path)
-    print("보존률:\t\t\t\t", rate)
-    print("사용된 dimension:\t\t", K)
-    print("원본 이미지 크기：\t\t", raw_img.shape)
-    print("차원축소 후 각 matrix 크기:\t3 x ({} + {} + {})". format(u_shape, s_shape, vT_shape))
-
 def compute_MSE(raw_img, result):
     return np.mean(np.square(raw_img - result))
 
 def compute_l2_distance(input, compare_img):
     return np.linalg.norm(input-compare_img)
 
-def svd_pca(student_id, image_path, raw_img, rate = 0.8):
+def svd_pca(raw_img, rate):
     result = np.zeros(raw_img.shape)
     u_shape, s_shape, vT_shape  = 0 , 0 , 0
     U, sigma, V = np.linalg.svd(raw_img[:, :])
@@ -71,19 +63,16 @@ def svd_pca(student_id, image_path, raw_img, rate = 0.8):
     #결과를 0~255의 int 배열로 저장 (이미지이기 때문에)
     result  = np.round(result * 255).astype('int')
     #compute MSE
-    mse = compute_MSE(raw_img, result)
+    # mse = compute_MSE(raw_img, result)
     # 결과 저장
-    save_img(student_id,image_path,result)
-    # 압축률 계산
-    #정보 표시
-    # print_info(image_path, rate, K, raw_img, u_shape, s_shape, vT_shape)
-    return K, mse
+    # save_img(student_id,image_path,result)
+    return result, K
 
-def step1_output(rate, K_list):
+def step1_output(rate, K):
     output = open('./2016147588/output.txt', 'w')
     output.write("########## STEP 1 ##########\n")
     output.write(f"Input Percentage: {rate}\n")
-    output.write(f"Selected Dimension: {K_list[0]}\n")
+    output.write(f"Selected Dimension: {K}\n")
     output.write("\n")
     return output
 def step2_output(output, mse_list):
@@ -99,42 +88,64 @@ def step3_output(output, recognition_result_list):
     for i, recog_result in enumerate(recognition_result_list):
         output.write(f"test{str(i+1).zfill(2)}.pgm ==> {recog_result}\n")
     return output
+
+def split_image_and_save_into_dir(imgs,train_img_file_list):
+    zipped_images_list = []
+    for i,file in enumerate(train_img_file_list):
+        img = imgs[:,168*i:168*(i+1)]
+        file_path = "./2016147588/" + file
+        cv2.imwrite(file_path,img)
+        zipped_images_list.append(img)
+    return zipped_images_list
+
 #main func
 if __name__ == "__main__":
     student_id = "2016147588"
     createDir(student_id)
     rate=float(sys.argv[1])
     #image names
-    train_img_list = os.listdir("faces_training") # dir is your directory path
-    test_img_list = os.listdir("faces_test")
+    train_img_file_list = os.listdir("faces_training") # dir is your directory path
+    test_img_file_list = os.listdir("faces_test")
     
     #sort filenames by number inside
-    train_img_list.sort(key=natural_keys)
-    test_img_list.sort(key=natural_keys)
-
-    
+    train_img_file_list.sort(key=natural_keys)
+    test_img_file_list.sort(key=natural_keys)
 
     #real image objects
     train_img_obj_list = []
     test_img_obj_list = []
 
-    K_list = []
     mse_list = []
     recognition_result_list = []
 
     #read train images =================step 1, 2=================
-    for img_name in train_img_list:
-        print(img_name)
+    for img_name in train_img_file_list:
+        # print(img_name)
         image_path = f"./faces_training/{img_name}"
         raw_img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         train_img_obj_list.append(raw_img)
         #run svd and caculate mse
-        temp_K, temp_mse = svd_pca(student_id, image_path, raw_img.copy(), rate) #apply svd and mse
-        K_list.append(temp_K)
+
+
+    # =================step 1=================
+    train_img_concat = np.concatenate(train_img_obj_list, axis=1)
+    zipped_imgs ,K = svd_pca(train_img_concat, rate) #apply svd and mse
+    plt.imshow(zipped_imgs, 'gray')
+    plt.show()
+    # show_img(zipped_imgs)
+    print(zipped_imgs.shape)
+    print(K)
+    zipped_train_images_obj_list = split_image_and_save_into_dir(zipped_imgs, train_img_file_list)
+
+    # =================step 2=================
+    for i in range(len(zipped_train_images_obj_list)):
+        temp_mse = compute_MSE(zipped_train_images_obj_list[i],train_img_obj_list[i])
         mse_list.append(temp_mse)
+    
+
 
     #read test images =================step 3=================
-    for img in test_img_list:
+    for img in test_img_file_list:
         # print(img)
         image_path = f"./faces_test/{img}"
         test_img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -143,26 +154,36 @@ if __name__ == "__main__":
     for i, test_img in enumerate(test_img_obj_list):
         temp_distance_list = []
         for j, train_img in enumerate(train_img_obj_list):
-            # print(train_img_list[j])
+            # print(train_img_file_list[j])
             temp_distance = compute_l2_distance(train_img, test_img)
             temp_distance_list.append(temp_distance)
-        print(test_img_list[i])
-        recognition_result = train_img_list[np.argmin(temp_distance_list)]
+        print(test_img_file_list[i])
+        recognition_result = train_img_file_list[np.argmin(temp_distance_list)]
         print(np.round(temp_distance_list,2))
         print(np.min(temp_distance_list))
         print(np.argmin(temp_distance_list))
         recognition_result_list.append(recognition_result)
-    print("train_img_list")
-    print(train_img_list)
-    print("test_img_list")
-    print(test_img_list)
+    print("train_img_file_list")
+    print(train_img_file_list)
+    print("test_img_file_list")
+    print(test_img_file_list)
     print("recognition_result_list")
     print(recognition_result_list)
     print("min temp_distance_list")
     print(recognition_result)
-    output = step1_output(rate, K_list)
+    output = step1_output(rate, K)
     output = step2_output(output, mse_list)
     output = step3_output(output, recognition_result_list)
 
     output.close()
     print(compute_l2_distance(train_img_obj_list[0],test_img_obj_list[0]))
+
+
+
+
+
+
+
+
+
+
