@@ -24,10 +24,12 @@ class MLP():
         self.outputLsize = outputLsize
         self.learning_rate = learning_rate
         # initialize weights and biases
-        self.w1 = 0.0001 * np.random.randn(inputLsize, hiddenLsize)
-        self.b1 = np.zeros(hiddenLsize)
-        self.w2 = 0.0001 * np.random.randn(hiddenLsize, outputLsize)
-        self.b2 = np.zeros(outputLsize)
+        self.w1 = 0.001 * np.random.randn(inputLsize, hiddenLsize)
+        # self.b1 = np.zeros(hiddenLsize)
+        self.b1 = 0.000001 * np.random.randn(hiddenLsize)
+        self.w2 = 0.001 * np.random.randn(hiddenLsize, outputLsize)
+        # self.b2 = np.zeros(outputLsize)
+        self.b2 = 0.000001 * np.random.randn(outputLsize)
         # arrays to store loss and accuracy
         self.lossArr = []
         self.accuracyArr = []
